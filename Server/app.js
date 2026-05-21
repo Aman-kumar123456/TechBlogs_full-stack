@@ -1,31 +1,51 @@
-const express = require('express');
-const app = express();
-const cookieParser=require('cookie-parser'); // Import cookie-parser
-const cors = require('cors'); // Import CORS middleware
- // Use CORS middleware to allow cross-origin requests
-require('dotenv').config();
-const conn = require('./conn/conn'); // Import the conn function
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
+import helmet from "helmet";
+import conn from "./conn/conn.js";
+import userRouter from "./routes/user.route.js";
+import categoryRouter from "./routes/category.route.js";
+import blogRouter from "./routes/blog.route.js";
+import uploadRouter from "./routes/uploadimage.route.js";
+import favouriteRouter from "./routes/favouriteblog.route.js";
 
-conn(); // Call the function to connect to MongoDB
-const userApi=require('./routes/user.route');
-const adminApi=require('./routes/admin.route');
-const categoryApi=require('./routes/category.route');
-const blogApi=require("./routes/blog.route");
-app.use(cors({
-    origin: "http://localhost:5173", // Allow requests from this origin
-    credentials: true // Allow cookies to be sent with requests
-}));
-// app.get('/', (req, res) => { 
-//     res.send('Welcome to Aman\'s Blog Server!');
-// });
+const app = express();
+
+app.use(
+  cors({
+    origin: process.env.FRONT_END,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(cookieParser());
- // Middleware to parse JSON bodies
-app.use('/api/user',userApi); // Use the user API routes
-app.use('/api/admin',adminApi); // Use the user API routes
-app.use('/api/category',categoryApi); // Use the user API routes
-app.use('/api/blog',blogApi);
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-    console.log(`Server is running on port http://localhost:${port} `);
-})
+app.use(morgan());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  }),
+);
+
+const PORT = 5000 || process.env.PORT;
+
+// app.get("/",(req,res)=>{
+//     res.send("Hello World");
+// })
+app.get("/", (req, res) => {
+  res.send("Hello World is here --------------------" + PORT);
+});
+
+app.use("/api/user", userRouter);
+app.use("/api/category", categoryRouter);
+app.use("/api/blog", blogRouter);
+app.use("/api/uploadimage", uploadRouter);
+app.use("/api/favourite", favouriteRouter);
+
+conn().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port {http://localhost:${PORT}}`);
+  });
+});

@@ -1,89 +1,78 @@
-const User = require('../models/user.model');
-const Category = require('../models/category.model');
-const Blog = require('../models/blog.model');
+import CategoryModel from "../models/category.model.js";
 
+export async function addcategorycontroller(request, response) {
+  try {
+    const { title } = request.body;
 
-
-
-
-
-
-
-
-// add category controller
-exports.addCategory=async(req,res)=>{
-try {
-    const {title}=req.body;
-    const checkCat = await Category.findOne({ title });
-
-if (checkCat) {
-  return res.status(400).json({ error: "Category already exists" });
-}
-
-const newCat = new Category({ title });
-await newCat.save();
-
-return res.status(200).json({ success: true, message: "Category added" });
-} catch (error) {
-        return res.status(500).json({ 
-                message: 'Internal server error',
-                error: true,
-                success: false
-            });
-}
-}
-
-
-
-
-
-
-
-
-// get category controller
-exports.getcategory=async(req,res)=>{
-try {
-    const categories = await Category.find();
-
-return res.status(200).json({ success: true, categories });
-} catch (error) {
-        return res.status(500).json({ 
-                message: 'Internal server error',
-                error: true,
-                success: false
-            });
-}
-}
-
-
-//get blogs by category
-
-exports.getcategoryblogs=async(req,res)=>{
-try {
-    const {id}=req.params
-    const categories = await Category.findById(id).populate('blogs');
-    if (!categories) {
-      return res.status(404).json({
-        message: 'Category not found',
+    if (!title) {
+      return response.status(400).json({
+        message: "provide title",
+        success: false,
         error: true,
-        success: false
+      });
+    }
+    const category = new CategoryModel({ title });
+    const savecategory = await category.save();
+    return response.json({
+      message: "Category Added",
+      success: true,
+      error: false,
+      data: savecategory,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+}
+
+// get all category controller.....
+export async function getcategorycontroller(request, response) {
+  try {
+    const data = await CategoryModel.find().sort({ createdAt: -1 });
+
+    return response.json({
+      data: data,
+      error: false,
+      success: true,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+}
+
+// delete category controller......
+
+export async function deleteCategoryController(request, response) {
+  try {
+    const { _id } = request.body;
+
+    const deleteCategory = await CategoryModel.deleteOne({ _id: _id });
+
+    if (!deleteCategory) {
+      return response.status(400).json({
+        message: "Category not delete",
+        success: false,
+        error: true,
       });
     }
 
-return res.status(200).json({ success: true, categories });
-} catch (error) {
-        return res.status(500).json({ 
-                message: 'Internal server error',
-                error: true,
-                success: false
-            });
+    return response.json({
+      message: "Category deleted",
+      success: true,
+      error: false,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      error: true,
+      success: false,
+    });
+  }
 }
-}
-
-
-
-
-
-
-
-//get category by its Id

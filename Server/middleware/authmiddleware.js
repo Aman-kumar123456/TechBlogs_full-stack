@@ -1,55 +1,37 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/user.model')
+import jwt from "jsonwebtoken";
 
-const authmiddleware = {
-    verifyToken: async (req, res, next) => {
-        const token = req.cookies.Amanblogs;
-        if (!token) {
-            return res.status(401).json({
-                message: "Access Denied.. Provide token"
-            })
-        }
+const auth = async (request, response, next) => {
+  try {
+    const token =
+      request.cookies.accesstoken ||
+      request?.headers?.authorization?.split(" ")[1];
 
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-
-
-            // req.user=decoded;
-
-
-
-
-            // fetch userdetails
-            const user = await User.findById(decoded.id);
-            if (!user) {
-                return res.status(400).json({
-                    message: "User not found ",
-
-                });
-            }
-            req.user = user;
-            next();
-        } catch (error) {
-            return res.status(400).json({
-                message: "Invalid Token"
-            })
-        }
-    },
-
-
-
-
-
-    authorization: (role) => {
-        return (req, res, next) => {
-            if (req.user.role !== role) {
-                return res.status(403).json({
-                    message: "Access denied",
-                })
-            }
-            next();
-        }
+    if (!token) {
+      return response.status(401).json({
+        message: "Provide token",
+      });
     }
-}
-module.exports = authmiddleware;
+
+    const decode = await jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY);
+
+    if (!decode) {
+      return response.status(401).json({
+        message: "unauthorized access",
+        error: true,
+        success: false,
+      });
+    }
+
+    request.userId = decode.id;
+
+    next();
+  } catch (error) {
+    return response.status(500).json({
+      message: "You have not login", ///error.message || error,
+      error: true,
+      success: false,
+    });
+  }
+};
+
+export default auth;

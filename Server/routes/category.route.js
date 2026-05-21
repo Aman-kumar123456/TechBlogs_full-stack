@@ -1,15 +1,13 @@
-const router=require('express').Router();
-const categorycontroller=require('./../controllers/categorycontroller'); // Import the user controller
-const authmiddleware=require('../middleware/authmiddleware');
+
+import {Router} from 'express'
+import auth from '../middleware/authmiddleware.js';
+import { addcategorycontroller, deleteCategoryController, getcategorycontroller } from '../controllers/categorycontroller.js';
 
 
+const categoryRouter=Router();
+categoryRouter.post('/add-category',auth,addcategorycontroller);
+categoryRouter.get('/get-category',getcategorycontroller);
+categoryRouter.delete('/delete-category',deleteCategoryController);
 
 
-
-
-router.post('/addcategory',authmiddleware.verifyToken,authmiddleware.authorization('admin'),categorycontroller.addCategory);
-router.get('/getcategory',categorycontroller.getcategory)
-router.get('/getcategoryblogs/:id',categorycontroller.getcategoryblogs)
-
-
-module.exports=router;
+export default categoryRouter;

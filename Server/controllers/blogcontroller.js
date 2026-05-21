@@ -1,338 +1,225 @@
-const Blog = require('../models/blog.model');
-const USER=require("../models/user.model");
-const jwt = require('jsonwebtoken');
+import BlogModel from "../models/blog.model.js";
+import CategoryModel from "../models/category.model.js";
 
+export async function addBlogcontroller(request, response) {
+  try {
+    const { title, description, image, category } = request.body;
 
-
-
-
-
-
-
-// fetch all blogs controller
-exports.fetchAllblog = async (req, res) => {
-    try {
-        const blogs = await Blog.find().sort({ createdA: -1 })
-        res.status(200).json({ success: true, blogs });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+    if (!title || !description || !image || !category) {
+      return response.status(400).json({
+        message: "Provide all fields",
+        success: false,
+        error: true,
+      });
     }
+
+    const Blog = new BlogModel({
+      title,
+      description,
+      image,
+      category,
+    });
+    const saveblog = await Blog.save();
+
+    const updatecategory = await CategoryModel.findByIdAndUpdate(
+      category,
+      {
+        $push: {
+          blogs: saveblog._id,
+        },
+      },
+      { new: true },
+    );
+
+    return response.json({
+      message: "Blog created",
+      success: true,
+      error: false,
+      data: saveblog,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
 }
 
+// fetch all blogs controller.....
 
+export async function getallblogcontroller(request, response) {
+  try {
+    const allblogs = await BlogModel.find();
 
+    return response.json({
+      message: "all blogs fetched successfully ",
+      error: false,
+      success: true,
+      data: allblogs,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
+//delete blogs controller.....
 
-// fetch recents blogs.
+export async function deleteblogcontroller(request, response) {
+  try {
+    const { _id } = request.body;
+    const deleteBlog = await BlogModel.deleteOne({ _id: _id });
 
+    return response.json({
+      message: "blog deleted",
+      error: false,
+      success: true,
+      data: deleteBlog,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
 
-exports.fetchrecenrblog = async (req, res) => {
-    try {
-        const blogs = await Blog.find().sort({ createdA: -1 }).limit(4)
-        res.status(200).json({ success: true, blogs });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
+// edit blog controller.....
+export async function editblogcontroller(request, response) {
+  try {
+    const { _id, title, description, image, category } = request.body;
+
+    if (!_id || !title || !description || !image || !category) {
+      return response.status(400).json({
+        message: "Provide all fields",
+        success: false,
+        error: true,
+      });
     }
+
+    const updatedblog = await BlogModel.findByIdAndUpdate(
+      { _id: _id },
+      {
+        ...(title && { title: title }),
+        ...(description && { description: description }),
+        ...(image && { image: image }),
+        ...(category && { category: category }),
+      },
+      { new: true },
+    );
+
+    return response.json({
+      message: "blog updated",
+      success: true,
+      error: false,
+      data: updatedblog,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
 }
 
+// fetch blog details by id controller......
 
+export async function getBlogDetailsById(request, response) {
+  try {
+    const { _id } = request.body;
 
-// get description of blog by id.
+    const blogDetail = await BlogModel.findOne({ _id: _id });
 
+    return response.json({
+      message: "blog details got",
+      success: true,
+      error: false,
+      data: blogDetail,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
 
+// fetch one blog which is created newes.....
+export async function getrecentFirstBlogcontroller(request, response) {
+  try {
+    const recentblogs = await BlogModel.findOne().sort({ createdAt: -1 });
+    return response.json({
+      message: "recent blogs fetched successfully ",
+      error: false,
+      success: true,
+      data: recentblogs,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
 
-exports.getDescription = async (req, res) => {
-    try {
-                const token = req.cookies.Amanblogs;
+//fetch recent blog by limit at home page.....
+export async function getRecentLimitBlogcontroller(request, response) {
+  try {
+    const recentblogs = await BlogModel.find()
+      .sort({ createdAt: -1 })
+      .limit(10);
+    return response.json({
+      message: "recent blogs fetched successfully ",
+      error: false,
+      success: true,
+      data: recentblogs,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
+}
 
-         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+// fetch blogs By category Id controller.....
 
-                    const user = await USER.findById(decoded.id);
-        const { id } = req.params;
-        const blog = await Blog.findById(id);
-        if (!blog) {
-            return res.status(400).json({ error: "No blog found" });
-        }
+export async function getBlogByCategoryIdController(request, response) {
+  try {
+    const { _id } = request.body;
 
-let favourite=false;
-
-        if(user && blog.favouriteBlogByUsers.includes(user._id)){
-favourite=true;
-        }
-
-
-        let like=false;
-
-        if(user && blog.LikedBlogByUsers.includes(user._id)){
-like=true;
-        }
-        res.status(200).json({ success: true, blog,favourite,like });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
+    if (!_id) {
+      return response.status(400).json({
+        message: "provide category Id",
+        error: true,
+        success: false,
+      });
     }
-}
-
-
-
-
-//add blogs to favourites
-
-exports.addBlogsTofavourite =async(req,res)=>{
-try {
-    const {user}=req;
-
-        const { id } = req.params;
-
-const blog = await Blog.findById(id);
-const existinguser = await USER.findById(user._id);
-
-if (!blog) {
-  res.status(400).json({ error: "No blog found" });
-}
-
-blog.favouriteBlogByUsers.push(user._id);
-existinguser.favouriteBlogs.push(id);
-await blog.save();
-await existinguser.save();
-
-res
-  .status(200)
-  .json({ success: true, message: "Blog added to favourites" });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
-    }
-}
-
-
-
-
-
-
-
-
-// remove blog from favourites
-
-
-
-
-
-
-
-
-
-exports.removeBlogsfromfavourites =async(req,res)=>{
-try {
-    const {user}=req;
-
-        const { id } = req.params;
-
-const blog = await Blog.findById(id);
-const existinguser = await USER.findById(user._id);
-
-if (!blog) {
-  res.status(400).json({ error: "No blog found" });
-}
-
-const userFavouriteIndex = existinguser.favouriteBlogs.indexOf(id);
-if (userFavouriteIndex !== -1) {
-  existinguser.favouriteBlogs.splice(userFavouriteIndex, 1);
-} else {
-  return res
-    .status(400)
-    .json({ error: "Blog is not in user's favourites" });
-}
-
-
-
-const blogFavouriteIndex = blog.favouriteBlogByUsers.indexOf(user._id);
-if (blogFavouriteIndex !== -1) {
-  blog.favouriteBlogByUsers.splice(blogFavouriteIndex, 1);
-}
-await blog.save();
-await existinguser.save();
-
-res
-  .status(200)
-  .json({ success: true, message: "Blog removed from favourites" });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
-    }
-}
-
-
-
-
-
-
-
-
-// add blogs to likes
-
-
-exports.addblogstoLikes =async(req,res)=>{
-try {
-    const {user}=req;
-
-        const { id } = req.params;
-
-const blog = await Blog.findById(id);
-const existinguser = await USER.findById(user._id);
-
-if (!blog) {
-  res.status(400).json({ error: "No blog found" });
-}
-
-blog.LikedBlogByUsers.push(user._id);
-existinguser.likedBlogs.push(id);
-await blog.save();
-await existinguser.save();
-
-res
-  .status(200)
-  .json({ success: true, message: "Blog added to Likes" });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
-    }
-}
-
-// dislike blogs and remove from Likes
-
-
-exports.removeblogfromLikes =async(req,res)=>{
-try {
-    const {user}=req;
-
-        const { id } = req.params;
-
-const blog = await Blog.findById(id);
-const existinguser = await USER.findById(user._id);
-
-if (!blog) {
-  res.status(400).json({ error: "No blog found" });
-}
-
-const userLikesIndex = existinguser.likedBlogs.indexOf(id);
-if (userLikesIndex !== -1) {
-  existinguser.likedBlogs.splice(userLikesIndex, 1);
-} else {
-  return res
-    .status(400)
-    .json({ error: "Blog is not in user's Likes" });
-}
-
-
-
-const blogLikeIndex = blog.LikedBlogByUsers.indexOf(user._id);
-if (blogLikeIndex !== -1) {
-  blog.LikedBlogByUsers.splice(blogLikeIndex, 1);
-}
-await blog.save();
-await existinguser.save();
-
-res
-  .status(200)
-  .json({ success: true, message: "Blog removed from Likes" });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
-    }
-}
-
-
-
-
-
-
-
-
-//fetch likes blogs.
-
-
-
-
-
-
-// // fetch favourite blogs. is in  usercontroller
-
-
-
-
-// exports.fetchFavourite =async(req,res)=>{
-// try {
-//     const {user}=req;
-
-//         const { id } = req.params;
-
-// const blog = await Blog.findById(id);
-// const existinguser = await USER.findById(user._id);
-
-// if (!blog) {
-//   res.status(400).json({ error: "No blog found" });
-// }
-
-// blog.favouriteBlogByUsers.push(user._id);
-// existinguser.favouriteBlogs.push(id);
-// await blog.save();
-// await existinguser.save();
-
-// res
-//   .status(200)
-//   .json({ success: true, message: "Blog added to favourites" });
-//     } catch (error) {
-//         res.status(500).json({ error: "Internal server error" });
-
-//     }
-// }
-
-
-
-
-// Edit blogs or Update blogs
-
-
-
-
-
-
-
-
-exports.EditBlogs =async(req,res)=>{
-try {
-
-        const { id } = req.params;
-const {title,description}=req.body;
-const blog = await Blog.findByIdAndUpdate(id,{title,description});
-await blog.save();
-
-
-
-res
-  .status(200)
-  .json({ success: true, message: "Blog UPdated Successfully." });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
-    }
-}
-
-// delete a particular  blogs
-
-exports.deleteblogs =async(req,res)=>{
-try {
-
-        const { id } = req.params;
- await Blog.findByIdAndDelete(id);
-
-
-
-res
-  .status(200)
-  .json({ success: true, message: "Blog deleted Successfully." });
-    } catch (error) {
-        res.status(500).json({ error: "Internal server error" });
-
-    }
+    const categoryBlogs = await BlogModel.find({
+      category: { $in: _id },
+    })
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    return response.json({
+      message: "category Blogs got ",
+      error: false,
+      success: true,
+      data: categoryBlogs,
+    });
+  } catch (error) {
+    return response.status(500).json({
+      message: error.message || error,
+      success: false,
+      error: true,
+    });
+  }
 }
